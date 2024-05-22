@@ -1,27 +1,7 @@
-/*!
-
-=========================================================
-* Black Dashboard React v1.2.2
-=========================================================
-
-* Product Page: https://www.creative-tim.com/product/black-dashboard-react
-* Copyright 2023 Creative Tim (https://www.creative-tim.com)
-* Licensed under MIT (https://github.com/creativetimofficial/black-dashboard-react/blob/master/LICENSE.md)
-
-* Coded by Creative Tim
-
-=========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-*/
-import React from "react";
-// nodejs library that concatenates classes
+import React, { useState, useEffect } from "react";
 import classNames from "classnames";
-// react plugin used to create charts
 import { Line, Bar } from "react-chartjs-2";
-
-// reactstrap components
+import axios from "axios";
 import {
   Button,
   ButtonGroup,
@@ -40,9 +20,9 @@ import {
   Row,
   Col,
   UncontrolledTooltip,
+  Spinner,
+  Alert,
 } from "reactstrap";
-
-// core components
 import {
   chartExample1,
   chartExample2,
@@ -51,88 +31,195 @@ import {
 } from "variables/charts.js";
 
 function Dashboard(props) {
-  const [bigChartData, setbigChartData] = React.useState("data1");
-  const setBgChartData = (name) => {
-    setbigChartData(name);
+  const [historicalPrices, setHistoricalPrices] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("BTC");
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentPrice, setCurrentPrice] = useState(null);
+  const [coinName, setCoinName] = useState("Bitcoin");
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchHistoricalData = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await axios.get(`http://127.0.0.1:5586/binance/${searchTerm}`);
+        setHistoricalPrices(response.data.historical_prices);
+        setCurrentPrice(response.data.current_price); // Assuming the API returns the current price
+        setCoinName(response.data.coin_name); // Assuming the API returns the coin name
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setError("There is no such symbol.");
+      }
+      setIsLoading(false);
+    };
+    fetchHistoricalData();
+  }, [searchTerm]);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    const symbol = e.target.elements.symbol.value.toUpperCase();
+    setSearchTerm(symbol);
   };
+
+  const dates = historicalPrices.map((data) => data.date);
+  const prices = historicalPrices.map((data) => data.price);
+
+  const chartData = {
+    labels: dates,
+    datasets: [
+      {
+        label: "Price By Day",
+        fill: false,
+        lineTension: 0.1,
+        backgroundColor: "rgba(75,192,192,0.4)",
+        borderColor: "rgba(75,192,192,1)",
+        borderCapStyle: "butt",
+        borderDash: [],
+        borderDashOffset: 0.0,
+        borderJoinStyle: "miter",
+        pointBorderColor: "rgba(75,192,192,1)",
+        pointBackgroundColor: "#fff",
+        pointBorderWidth: 1,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: "rgba(75,192,192,1)",
+        pointHoverBorderColor: "rgba(220,220,220,1)",
+        pointHoverBorderWidth: 2,
+        pointRadius: 1,
+        pointHitRadius: 10,
+        data: prices,
+      },
+    ],
+  };
+
+  const aggregatedData = historicalPrices.reduce((acc, data) => {
+    const date = new Date(data.date);
+    const month = date.toLocaleString('default', { month: 'short' });
+    if (!acc[month]) {
+      acc[month] = { total: 0, count: 0 };
+    }
+    acc[month].total += data.price;
+    acc[month].count += 1;
+    return acc;
+  }, {});
+
+  const months = Object.keys(aggregatedData);
+  const averagePrices = months.map((month) => {
+    return aggregatedData[month].total / aggregatedData[month].count;
+  });
+
+  const chartDataByMonth = {
+    labels: months,
+    datasets: [
+      {
+        label: "Price by Month",
+        fill: false,
+        lineTension: 0.1,
+        backgroundColor: "rgba(192,75,192,0.4)",
+        borderColor: "rgba(192,75,192,1)",
+        borderCapStyle: "butt",
+        borderDash: [],
+        borderDashOffset: 0.0,
+        borderJoinStyle: "miter",
+        pointBorderColor: "rgba(192,75,192,1)",
+        pointBackgroundColor: "#fff",
+        pointBorderWidth: 1,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: "rgba(192,75,192,1)",
+        pointHoverBorderColor: "rgba(220,220,220,1)",
+        pointHoverBorderWidth: 2,
+        pointRadius: 1,
+        pointHitRadius: 10,
+        data: averagePrices,
+      },
+    ],
+  };
+
+  function getWeekNumber(date) {
+    const dayOfWeek = date.getDay() || 7;
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() + 4 - dayOfWeek);
+    const yearStart = new Date(date.getFullYear(), 0, 1);
+    return Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
+  }
+
+  const aggregateData = historicalPrices.reduce((acc, data) => {
+    const date = new Date(data.date);
+    const week = `Week ${getWeekNumber(date)}`;
+    if (!acc[week]) {
+      acc[week] = { total: 0, count: 0 };
+    }
+    acc[week].total += data.price;
+    acc[week].count += 1;
+    return acc;
+  }, {});
+
+  const weeks = Object.keys(aggregateData);
+  const avgPrices = weeks.map((week) => {
+    return aggregateData[week].total / aggregateData[week].count;
+  });
+
+  const chartDataByWeek = {
+    labels: weeks,
+    datasets: [
+      {
+        label: "Price by Week",
+        fill: false,
+        lineTension: 0.1,
+        backgroundColor: "rgba(4, 162, 235, 0.2)", 
+        borderColor: "rgba(54, 162, 235, 1)", 
+        borderCapStyle: "butt",
+        borderDash: [],
+        borderDashOffset: 0.0,
+        borderJoinStyle: "miter",
+        pointBorderColor: "rgba(54, 162, 235, 1)",
+        pointBackgroundColor: "#fff",
+        pointBorderWidth: 1,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: "rgba(54, 162, 235, 1)",
+        pointHoverBorderColor: "rgba(54, 162, 235, 1)",
+        pointHoverBorderWidth: 2,
+        pointRadius: 1,
+        pointHitRadius: 10,
+        data: avgPrices,
+      },
+    ],
+  };
+
   return (
     <>
       <div className="content">
-        <Row>
-          <Col xs="12">
-            <Card className="card-chart">
+        <Row lg="12">
+          <Col lg="12">
+            <Card className="card-chart" style={{ width: '100%', maxWidth: '100%' }}>
               <CardHeader>
-                <Row>
-                  <Col className="text-left" sm="6">
-                    <h5 className="card-category">Total Shipments</h5>
-                    <CardTitle tag="h2">Performance</CardTitle>
-                  </Col>
-                  <Col sm="6">
-                    <ButtonGroup
-                      className="btn-group-toggle float-right"
-                      data-toggle="buttons"
-                    >
-                      <Button
-                        tag="label"
-                        className={classNames("btn-simple", {
-                          active: bigChartData === "data1",
-                        })}
-                        color="info"
-                        id="0"
-                        size="sm"
-                        onClick={() => setBgChartData("data1")}
-                      >
-                        <span className="d-none d-sm-block d-md-block d-lg-block d-xl-block">
-                          Accounts
-                        </span>
-                        <span className="d-block d-sm-none">
-                          <i className="tim-icons icon-single-02" />
-                        </span>
-                      </Button>
-                      <Button
-                        color="info"
-                        id="1"
-                        size="sm"
-                        tag="label"
-                        className={classNames("btn-simple", {
-                          active: bigChartData === "data2",
-                        })}
-                        onClick={() => setBgChartData("data2")}
-                      >
-                        <span className="d-none d-sm-block d-md-block d-lg-block d-xl-block">
-                          Purchases
-                        </span>
-                        <span className="d-block d-sm-none">
-                          <i className="tim-icons icon-gift-2" />
-                        </span>
-                      </Button>
-                      <Button
-                        color="info"
-                        id="2"
-                        size="sm"
-                        tag="label"
-                        className={classNames("btn-simple", {
-                          active: bigChartData === "data3",
-                        })}
-                        onClick={() => setBgChartData("data3")}
-                      >
-                        <span className="d-none d-sm-block d-md-block d-lg-block d-xl-block">
-                          Sessions
-                        </span>
-                        <span className="d-block d-sm-none">
-                          <i className="tim-icons icon-tap-02" />
-                        </span>
-                      </Button>
-                    </ButtonGroup>
-                  </Col>
-                </Row>
+                <h5 className="card-category">Overview</h5>
+                <CardTitle tag="h3">
+                  <FormGroup>
+                    <form onSubmit={handleSearch}>
+                      <Input type="text" name="symbol" placeholder="Enter Currency Symbol (e.g., BTC)" />
+                      <Button type="submit">Search</Button>
+                    </form>
+                  </FormGroup>
+                  {currentPrice && coinName && (
+                    <div>
+                      <h4>{coinName}</h4>
+                      <h5>Current Price: ${currentPrice}</h5>
+                    </div>
+                  )}
+                </CardTitle>
               </CardHeader>
               <CardBody>
-                <div className="chart-area">
-                  <Line
-                    data={chartExample1[bigChartData]}
-                    options={chartExample1.options}
-                  />
+                <div className="chart-area-wrapper">
+                  <div className="chart-area">
+                    {isLoading ? (
+                      <Spinner color="primary" />
+                    ) : error ? (
+                      <Alert color="danger">{error}</Alert>
+                    ) : (
+                      <Line data={chartData} />
+                    )}
+                  </div>
                 </div>
               </CardBody>
             </Card>
@@ -142,16 +229,13 @@ function Dashboard(props) {
           <Col lg="4">
             <Card className="card-chart">
               <CardHeader>
-                <h5 className="card-category">Total Shipments</h5>
-                <CardTitle tag="h3">
-                  <i className="tim-icons icon-bell-55 text-info" /> 763,215
-                </CardTitle>
+                <h5 className="card-category">Months</h5>
               </CardHeader>
               <CardBody>
                 <div className="chart-area">
                   <Line
-                    data={chartExample2.data}
-                    options={chartExample2.options}
+                    data={chartDataByMonth}
+                    //options={chartExample1.options}
                   />
                 </div>
               </CardBody>
@@ -179,16 +263,16 @@ function Dashboard(props) {
           <Col lg="4">
             <Card className="card-chart">
               <CardHeader>
-                <h5 className="card-category">Completed Tasks</h5>
-                <CardTitle tag="h3">
+                <h5 className="card-category">Weeks</h5>
+                {/* <CardTitle tag="h3">
                   <i className="tim-icons icon-send text-success" /> 12,100K
-                </CardTitle>
+                </CardTitle> */}
               </CardHeader>
               <CardBody>
                 <div className="chart-area">
                   <Line
-                    data={chartExample4.data}
-                    options={chartExample4.options}
+                    data={chartDataByWeek}
+                    // options={chartExample4.options}
                   />
                 </div>
               </CardBody>

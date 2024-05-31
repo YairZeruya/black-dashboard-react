@@ -19799,7 +19799,7 @@ textarea.form-control {
   padding: 0 10px;
 }
 .card-chart .chart-area {
-  height: 220px;
+  height: 280px;
   width: 100%;
 }
 .card-chart .card-footer {
@@ -20036,6 +20036,13 @@ textarea.form-control {
 
 select.form-control option {
   color: #888;
+}
+
+/* styles.css */
+.chart-area {
+  position: relative;
+  height: 400px; /* Adjust height as needed */
+  width: 100%;
 }
 
 /*# sourceMappingURL=black-dashboard-react.css.map */

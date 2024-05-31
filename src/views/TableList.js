@@ -22,7 +22,7 @@ function Tables() {
             <CardHeader>
               <CardTitle tag="h4">Coins Table</CardTitle>
             </CardHeader>
-            <CardBody style={{ maxHeight: "400px", overflowY: "auto" }}>
+            <CardBody style={{ maxHeight: "435px", overflowY: "auto" }}>
               <Table className="tablesorter">
                 <thead className="text-primary">
                   <tr>

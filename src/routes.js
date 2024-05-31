@@ -21,7 +21,7 @@ import Map from "views/Map.js";
 import Notifications from "views/Notifications.js";
 import Rtl from "views/Rtl.js";
 import TableList from "views/TableList.js";
-import Typography from "views/Typography.js";
+import Backtesting from "views/Backtesting.js";
 import UserProfile from "views/UserProfile.js";
 
 var routes = [
@@ -74,11 +74,11 @@ var routes = [
     layout: "/admin",
   },
   {
-    path: "/typography",
-    name: "Typography",
-    rtlName: "طباعة",
+    path: "/Backtesting",
+    name: "Backtesting",
+    rtlName: "בדיקה לאחור",
     icon: "tim-icons icon-align-center",
-    component: <Typography />,
+    component: <Backtesting />,
     layout: "/admin",
   },
   {

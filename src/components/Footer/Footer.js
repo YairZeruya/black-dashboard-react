@@ -28,7 +28,7 @@ function Footer() {
         <Nav>
           <NavItem>
             <NavLink href="https://www.creative-tim.com/?ref=bdr-user-archive-footer">
-              Creative Tim
+              github
             </NavLink>
           </NavItem>
           <NavItem>

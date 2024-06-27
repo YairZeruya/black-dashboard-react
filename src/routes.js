@@ -17,12 +17,12 @@
 */
 import Dashboard from "views/Dashboard.js";
 import Icons from "views/Icons.js";
-import Map from "views/Map.js";
-import Notifications from "views/Notifications.js";
+import Strategies from "views/Strategies.js";
+import TradesManage from "views/TradesManage.js";
 import Rtl from "views/Rtl.js";
-import TableList from "views/TableList.js";
+import Coins from "views/Coins.js";
 import Backtesting from "views/Backtesting.js";
-import UserProfile from "views/UserProfile.js";
+import MyTrades from "views/MyTrades.js";
 
 var routes = [
   {
@@ -42,35 +42,35 @@ var routes = [
     layout: "/admin",
   },
   {
-    path: "/map",
-    name: "Map",
+    path: "/Strategies",
+    name: "Strategies",
     rtlName: "خرائط",
     icon: "tim-icons icon-pin",
-    component: <Map />,
+    component: <Strategies />,
     layout: "/admin",
   },
   {
-    path: "/notifications",
-    name: "Notifications",
+    path: "/TradesManage",
+    name: "Trades Manage",
     rtlName: "إخطارات",
     icon: "tim-icons icon-bell-55",
-    component: <Notifications />,
+    component: <TradesManage />,
     layout: "/admin",
   },
   {
-    path: "/user-profile",
-    name: "User Profile",
+    path: "/MyTrades",
+    name: "My Trades",
     rtlName: "ملف تعريفي للمستخدم",
     icon: "tim-icons icon-single-02",
-    component: <UserProfile />,
+    component: <MyTrades />,
     layout: "/admin",
   },
   {
-    path: "/tables",
-    name: "Table List",
+    path: "/coins",
+    name: "Coins",
     rtlName: "قائمة الجدول",
     icon: "tim-icons icon-puzzle-10",
-    component: <TableList />,
+    component: <Coins />,
     layout: "/admin",
   },
   {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardBody, CardTitle, Table, Row, Col } from "reactstrap";
 import axios from "axios";
 
-function Tables() {
+function Coins() {
   const url = "http://127.0.0.1:5586/binance";
   const [data, setData] = useState([]);
 
@@ -49,4 +49,4 @@ function Tables() {
   );
 }
 
-export default Tables;
+export default Coins;

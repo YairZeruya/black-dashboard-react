@@ -3,7 +3,7 @@
 **Run the following commands:**
 
 ```bash
-npm installl
+npm install
 ```
 
 ```bash

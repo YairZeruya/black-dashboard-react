@@ -17,8 +17,8 @@
 */
 import Dashboard from "views/Dashboard.js";
 import Icons from "views/Icons.js";
-import Strategies from "views/Strategies.js";
-import TradesManage from "views/TradesManage.js";
+import Strategies from "views/Strategies";
+import TradesManage from "views/TradesManage";
 import Rtl from "views/Rtl.js";
 import Coins from "views/Coins.js";
 import Backtesting from "views/Backtesting.js";
@@ -42,8 +42,8 @@ var routes = [
     layout: "/admin",
   },
   {
-    path: "/Strategies",
-    name: "Strategies",
+    path: "/map",
+    name: "Map",
     rtlName: "خرائط",
     icon: "tim-icons icon-pin",
     component: <Strategies />,

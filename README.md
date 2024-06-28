@@ -18,168 +18,269 @@ npm start
 
 ```bash
 import React, { useState, useEffect } from "react";
+import classNames from "classnames";
+import { Line } from "react-chartjs-2";
 import axios from "axios";
-import { Card, CardHeader, CardBody, CardTitle, Row, Col, Table, Form, FormGroup, Label, Input, Button } from "reactstrap";
+import {
+  Button,
+  ButtonGroup,
+  Card,
+  CardHeader,
+  CardBody,
+  CardTitle,
+  Input,
+  Row,
+  Col,
+  Spinner,
+  Alert,
+} from "reactstrap";
 
-function Backtesting() {
-  const [strategies, setStrategies] = useState([]);
-  const [selectedStrategy, setSelectedStrategy] = useState("");
-  const [timeFrame, setTimeFrame] = useState("1h");
-  const [interval, setInterval] = useState(30); // Default interval in days
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(false);
+function Dashboard(props) {
+  const [historicalPrices, setHistoricalPrices] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("BTC");
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentPrice, setCurrentPrice] = useState(null);
+  const [coinName, setCoinName] = useState("Bitcoin");
+  const [error, setError] = useState(null);
+  const [chartType, setChartType] = useState("day");
 
   useEffect(() => {
-    // Fetch the strategy mapping keys
-    const fetchStrategies = async () => {
+    const fetchHistoricalData = async () => {
+      setIsLoading(true);
+      setError(null);
       try {
-        const response = await axios.get('http://127.0.0.1:5586/strategies');
-        setStrategies(response.data);
+        const response = await axios.get(`http://127.0.0.1:5586/binance/${searchTerm}`);
+        setHistoricalPrices(response.data.historical_prices);
+        setCurrentPrice(response.data.current_price); // Assuming the API returns the current price
+        setCoinName(response.data.coin_name); // Assuming the API returns the coin name
       } catch (error) {
-        console.error("Error fetching strategies:", error);
+        console.error("Error fetching data:", error);
+        setError("There is no such symbol.");
       }
+      setIsLoading(false);
     };
-    fetchStrategies();
-  }, []);
+    fetchHistoricalData();
+  }, [searchTerm]);
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setLoading(true); // Show loading indicator
-    setData([]); // Clear previous data
-    try {
-      const response = await axios.get(`http://127.0.0.1:5586/backtest/${selectedStrategy}?timeframe=${timeFrame}&interval=${interval}`, {
-        transformResponse: [(data) => {
-          // Sanitize NaN values
-          return data.replace(/NaN/g, "null");
-        }]
-      });
+  const handleSearch = (e) => {
+    e.preventDefault();
+    const symbol = e.target.elements.symbol.value.toUpperCase();
+    setSearchTerm(symbol);
+  };
 
-      const parsedData = JSON.parse(response.data);
-      if (Array.isArray(parsedData)) {
-        const sortedData = parsedData.sort((a, b) => b.return - a.return).slice(0, 10); // Get top 10 sorted by return
-        setData(sortedData);
-      } else {
-        console.error('Expected an array but got:', typeof parsedData);
+  const dates = historicalPrices.map((data) => data.date);
+  const prices = historicalPrices.map((data) => data.price);
+
+  const chartData = {
+    labels: dates,
+    datasets: [
+      {
+        label: "Price By Day",
+        fill: false,
+        lineTension: 0.1,
+        backgroundColor: "rgba(75,192,192,0.4)",
+        borderColor: "rgba(75,192,192,1)",
+        borderCapStyle: "butt",
+        borderDash: [],
+        borderDashOffset: 0.0,
+        borderJoinStyle: "miter",
+        pointBorderColor: "rgba(75,192,192,1)",
+        pointBackgroundColor: "#fff",
+        pointBorderWidth: 1,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: "rgba(75,192,192,1)",
+        pointHoverBorderColor: "rgba(220,220,220,1)",
+        pointHoverBorderWidth: 2,
+        pointRadius: 1,
+        pointHitRadius: 10,
+        data: prices,
+      },
+    ],
+  };
+
+  // Function to aggregate data by month
+  const aggregateDataByMonth = () => {
+    const aggregatedData = historicalPrices.reduce((acc, data) => {
+      const date = new Date(data.date);
+      const month = date.toLocaleString("default", { month: "short" });
+      if (!acc[month]) {
+        acc[month] = { total: 0, count: 0 };
       }
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false); // Hide loading indicator
+      acc[month].total += data.price;
+      acc[month].count += 1;
+      return acc;
+    }, {});
+
+    const months = Object.keys(aggregatedData);
+    const averagePrices = months.map((month) => {
+      return aggregatedData[month].total / aggregatedData[month].count;
+    });
+
+    return {
+      labels: months,
+      datasets: [
+        {
+          label: "Price by Month",
+          fill: false,
+          lineTension: 0.1,
+          backgroundColor: "rgba(192,75,192,0.4)",
+          borderColor: "rgba(192,75,192,1)",
+          borderCapStyle: "butt",
+          borderDash: [],
+          borderDashOffset: 0.0,
+          borderJoinStyle: "miter",
+          pointBorderColor: "rgba(192,75,192,1)",
+          pointBackgroundColor: "#fff",
+          pointBorderWidth: 1,
+          pointHoverRadius: 5,
+          pointHoverBackgroundColor: "rgba(192,75,192,1)",
+          pointHoverBorderColor: "rgba(220,220,220,1)",
+          pointHoverBorderWidth: 2,
+          pointRadius: 1,
+          pointHitRadius: 10,
+          data: averagePrices,
+        },
+      ],
+    };
+  };
+
+  // Function to aggregate data by week
+  const aggregateDataByWeek = () => {
+    function getWeekNumber(date) {
+      const dayOfWeek = date.getDay() || 7;
+      date.setHours(0, 0, 0, 0);
+      date.setDate(date.getDate() + 4 - dayOfWeek);
+      const yearStart = new Date(date.getFullYear(), 0, 1);
+      return Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
+    }
+
+    const aggregatedData = historicalPrices.reduce((acc, data) => {
+      const date = new Date(data.date);
+      const week = `Week ${getWeekNumber(date)}`;
+      if (!acc[week]) {
+        acc[week] = { total: 0, count: 0 };
+      }
+      acc[week].total += data.price;
+      acc[week].count += 1;
+      return acc;
+    }, {});
+
+    const weeks = Object.keys(aggregatedData);
+    const avgPrices = weeks.map((week) => {
+      return aggregatedData[week].total / aggregatedData[week].count;
+    });
+
+    return {
+      labels: weeks,
+      datasets: [
+        {
+          label: "Price by Week",
+          fill: false,
+          lineTension: 0.1,
+          backgroundColor: "rgba(4, 162, 235, 0.2)",
+          borderColor: "rgba(54, 162, 235, 1)",
+          borderCapStyle: "butt",
+          borderDash: [],
+          borderDashOffset: 0.0,
+          borderJoinStyle: "miter",
+          pointBorderColor: "rgba(54, 162, 235, 1)",
+          pointBackgroundColor: "#fff",
+          pointBorderWidth: 1,
+          pointHoverRadius: 5,
+          pointHoverBackgroundColor: "rgba(54, 162, 235, 1)",
+          pointHoverBorderColor: "rgba(54, 162, 235, 1)",
+          pointHoverBorderWidth: 2,
+          pointRadius: 1,
+          pointHitRadius: 10,
+          data: avgPrices,
+        },
+      ],
+    };
+  };
+
+  const renderChart = () => {
+    switch (chartType) {
+      case "month":
+        return <Line data={aggregateDataByMonth()} />;
+      case "week":
+        return <Line data={aggregateDataByWeek()} />;
+      case "day":
+      default:
+        return <Line data={chartData} />;
     }
   };
 
-  // Get all keys from the first data item to create the table headers
-  const headers = data.length > 0 ? Object.keys(data[0]) : [];
-
   return (
-    <div className="content">
-      <Row>
-        <Col lg="4" md="12">
-          <Card>
-            <CardHeader>
-              <CardTitle tag="h4">Select Strategy</CardTitle>
-            </CardHeader>
-            <CardBody>
-              <Form onSubmit={handleSubmit}>
-                <FormGroup>
-                  <Label for="strategySelect">Strategy</Label>
-                  <Input
-                    type="select"
-                    name="strategy"
-                    id="strategySelect"
-                    onChange={(e) => setSelectedStrategy(e.target.value)}
-                    required
-                  >
-                    <option value="">Select a strategy</option>
-                    {strategies.map((strategy, index) => (
-                      <option key={index} value={strategy}>
-                        {strategy}
-                      </option>
-                    ))}
-                  </Input>
-                </FormGroup>
-                <FormGroup>
-                  <Label for="timeFrameSelect">Time Frame</Label>
-                  <Input
-                    type="select"
-                    name="timeFrame"
-                    id="timeFrameSelect"
-                    onChange={(e) => setTimeFrame(e.target.value)}
-                    required
-                  >
-                    <option value="1h">1 Hour</option>
-                    <option value="4h">4 Hours</option>
-                    <option value="1d">1 Day</option>
-                  </Input>
-                </FormGroup>
-                <FormGroup>
-                  <Label for="intervalInput">Interval (days)</Label>
-                  <Input
-                    type="number"
-                    name="interval"
-                    id="intervalInput"
-                    value={interval}
-                    onChange={(e) => setInterval(e.target.value)}
-                    min="1"
-                    required
-                  />
-                </FormGroup>
-                <Button type="submit" color="primary">Run Backtest</Button>
-              </Form>
-            </CardBody>
-          </Card>
-        </Col>
-      </Row>
-      {loading ? ( // Display loading indicator if data is loading
-        <div>Loading data...</div>
-      ) : data.length > 0 && (
-        <Row>
-          <Col lg="12" md="12">
-            <Card>
-              <CardHeader>
-                <CardTitle tag="h4">{selectedStrategy}</CardTitle>
-                <div>
-                  <strong>Time Frame: </strong>{timeFrame}
-                </div>
-                <div>
-                  <strong>Interval: </strong>{interval} days
-                </div>
-              </CardHeader>
-              <CardBody>
-                <Table className="tablesorter" responsive>
-                  <thead className="text-primary">
-                    <tr>
-                      <th>Currency</th> {/* Ensure 'Currency' is the first column */}
-                      <th>Return</th> {/* Ensure 'Return' is the second column */}
-                      {headers.filter(header => header !== 'currency' && header !== 'return').map((header, index) => (
-                        <th key={index}>{header.charAt(0).toUpperCase() + header.slice(1)}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.map((item, index) => (
-                      <tr key={index}>
-                        <td>{item.currency}</td>
-                        <td className="text-center">
-                          {item.return !== undefined && !isNaN(item.return)
-                            ? item.return.toFixed(6)
-                            : 'N/A'}
-                        </td>
-                        {headers.filter(header => header !== 'currency' && header !== 'return').map((header, idx) => (
-                          <td key={idx}>{item[header]}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </CardBody>
-            </Card>
+    <>
+      <div className="content">
+        <Row className="align-items-center mb-4">
+          <Col md="4" className="d-flex">
+            <form onSubmit={handleSearch} className="d-flex w-100">
+              <Input type="text" name="symbol" placeholder="Enter Currency Symbol (e.g., BTC)" />
+              <Button type="submit" className="ml-2">Search</Button>
+            </form>
+          </Col>
+          <Col md="8" className="d-flex justify-content-end">
+            <ButtonGroup className="btn-group-toggle" data-toggle="buttons">
+              <Button
+                tag="label"
+                className={classNames("btn-simple", {
+                  active: chartType === "day",
+                })}
+                color="info"
+                id="0"
+                size="sm"
+                onClick={() => setChartType("day")}
+              >
+                Day
+              </Button>
+              <Button
+                tag="label"
+                className={classNames("btn-simple", {
+                  active: chartType === "week",
+                })}
+                color="info"
+                id="1"
+                size="sm"
+                onClick={() => setChartType("week")}
+              >
+                Week
+              </Button>
+              <Button
+                tag="label"
+                className={classNames("btn-simple", {
+                  active: chartType === "month",
+                })}
+                color="info"
+                id="2"
+                size="sm"
+                onClick={() => setChartType("month")}
+              >
+                Month
+              </Button>
+            </ButtonGroup>
           </Col>
         </Row>
-      )}
-    </div>
+        {isLoading ? (
+          <Spinner color="primary" />
+        ) : error ? (
+          <Alert color="danger">{error}</Alert>
+        ) : (
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle tag="h4">{coinName} Price Chart</CardTitle>
+                <h5>Current Price: ${currentPrice}</h5>
+              </CardHeader>
+              <CardBody>{renderChart()}</CardBody>
+            </Card>
+          </>
+        )}
+      </div>
+    </>
   );
 }
 
-export default Backtesting;
+export default Dashboard;
+
 ```
